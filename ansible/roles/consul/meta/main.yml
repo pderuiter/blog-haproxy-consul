@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: consul
+  namespace: pderuiter
+  author: Patrick de Ruiter
+  description: Install a Consul server or client agent with ACLs enabled, as in the HAProxy and Consul post
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - consul
+    - servicediscovery
+
+dependencies: []

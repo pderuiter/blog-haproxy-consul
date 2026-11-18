@@ -1,0 +1,10 @@
+---
+_consul_acl_tokens:
+  - description: agent token
+    policy: agent
+    accessor: "{{ consul_acl_agent_token_accessor }}"
+    secret: "{{ consul_acl_agent_token_secret }}"
+  - description: consul-template
+    policy: consul-template
+    accessor: "{{ consul_acl_template_token_accessor }}"
+    secret: "{{ consul_acl_template_token_secret }}"

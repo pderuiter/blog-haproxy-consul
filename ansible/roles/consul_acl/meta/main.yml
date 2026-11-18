@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: consul_acl
+  namespace: pderuiter
+  author: Patrick de Ruiter
+  description: Bootstrap Consul ACLs and create the agent and consul-template tokens from the post
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - consul
+    - acl
+
+dependencies: []

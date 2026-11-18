@@ -1,0 +1,11 @@
+---
+- name: Validate the agent configuration
+  ansible.builtin.command: /usr/local/bin/consul validate {{ consul_services_config_dir }}
+  changed_when: false
+  listen: Consul services changed
+
+- name: Reload consul
+  ansible.builtin.systemd_service:
+    name: consul
+    state: reloaded
+  listen: Consul services changed

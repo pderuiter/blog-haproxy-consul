@@ -1,0 +1,9 @@
+---
+consul_template_version: "0.43.1"
+consul_template_config_dir: /etc/consul-template
+consul_template_token: "{{ vault_consul_template_token_secret }}"
+
+# The post's template binds *:443 with "crt /etc/haproxy/certs/", so HAProxy
+# needs at least one certificate there. When the directory has none, a
+# self-signed placeholder for this CN is created. Replace it with a real one.
+consul_template_selfsigned_cn: example.com

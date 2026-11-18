@@ -1,0 +1,11 @@
+---
+# The services are registered with the default agent token (set by consul_acl)
+- name: Install the service definitions
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ consul_services_config_dir }}/{{ item }}"
+    owner: consul
+    group: consul
+    mode: "0640"
+  loop: "{{ consul_services_files }}"
+  notify: Consul services changed

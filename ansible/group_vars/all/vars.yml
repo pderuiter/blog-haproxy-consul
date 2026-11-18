@@ -1,0 +1,14 @@
+---
+consul_version: "2.1.0"
+consul_template_version: "0.43.1"
+consul_datacenter: dc1
+
+# The agents bind to their address in this network (go-sockaddr, as in the post)
+consul_bind_network: "10.0.0.0/8"
+
+# HAProxy branch from the official repositories (see roles/haproxy_install)
+haproxy_install_version: "3.3"
+
+# LAB/DEMO ONLY: answer the health checks on the service nodes. Set to false
+# when the real web (8080) and api (3000) services run there.
+demo_backend_enabled: true

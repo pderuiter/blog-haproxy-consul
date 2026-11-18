@@ -1,0 +1,6 @@
+---
+consul_services_config_dir: /etc/consul.d
+# Service definitions from the post, copied from files/ (web: port 8080, api: port 3000)
+consul_services_files:
+  - web-service.hcl
+  - api-service.hcl

@@ -1,0 +1,47 @@
+---
+# HAProxy and Consul: Dynamic Service Discovery for Load Balancing
+#
+#   consul_servers        3 Consul servers (raft quorum, ACLs, UI)
+#   consul_service_nodes  Consul client agent + the web and api service definitions
+#   haproxy_lb            Consul client agent + HAProxy + consul-template
+
+- name: Consul servers
+  hosts: consul_servers
+  gather_facts: true
+  roles:
+    - role: consul
+
+- name: Bootstrap ACLs on the first server
+  hosts: consul_servers[0]
+  gather_facts: false
+  roles:
+    - role: consul_acl
+
+- name: Consul client agents
+  hosts: consul_service_nodes:haproxy_lb
+  gather_facts: true
+  roles:
+    - role: consul
+
+- name: Agent tokens on every agent
+  hosts: consul_servers:consul_service_nodes:haproxy_lb
+  gather_facts: false
+  tasks:
+    - name: Set the agent and default ACL tokens
+      ansible.builtin.include_role:
+        name: consul_acl
+        tasks_from: agent_token
+
+- name: Services
+  hosts: consul_service_nodes
+  gather_facts: false
+  roles:
+    - role: demo_backend
+    - role: consul_services
+
+- name: Load balancer
+  hosts: haproxy_lb
+  gather_facts: false
+  roles:
+    - role: haproxy_install
+    - role: consul_template

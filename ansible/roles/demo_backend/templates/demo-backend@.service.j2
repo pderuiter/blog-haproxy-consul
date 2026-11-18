@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# LAB/DEMO ONLY backend for the blog-haproxy-consul companion repo
+[Unit]
+Description=Demo HTTP backend on port %i (lab only)
+After=network.target
+
+[Service]
+DynamicUser=true
+ExecStart=/usr/bin/python3 /usr/local/bin/demo-backend.py %i
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

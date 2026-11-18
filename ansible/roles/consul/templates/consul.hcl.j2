@@ -1,0 +1,56 @@
+# {{ ansible_managed }}
+datacenter = "{{ consul_datacenter }}"
+node_name = "{{ inventory_hostname }}"
+data_dir = "{{ consul_data_dir }}"
+log_level = "{{ consul_log_level }}"
+
+{% if consul_server %}
+server = true
+bootstrap_expect = {{ consul_bootstrap_expect }}
+
+bind_addr = "{{ '{{' }} GetPrivateInterfaces | include \"network\" \"{{ consul_bind_network }}\" | attr \"address\" {{ '}}' }}"
+client_addr = "0.0.0.0"
+
+ui_config {
+  enabled = true
+}
+
+connect {
+  enabled = true
+}
+
+addresses {
+  http = "0.0.0.0"
+  grpc = "0.0.0.0"
+}
+
+ports {
+  http = 8500
+  grpc = 8502
+  grpc_tls = 8503
+}
+{% else %}
+server = false
+
+bind_addr = "{{ '{{' }} GetPrivateInterfaces | include \"network\" \"{{ consul_bind_network }}\" | attr \"address\" {{ '}}' }}"
+client_addr = "127.0.0.1"
+{% endif %}
+
+retry_join = [
+{% for addr in consul_retry_join %}
+  "{{ addr }}"{{ "," if not loop.last else "" }}
+{% endfor %}
+]
+
+{% if not consul_server %}
+# Must match the servers, otherwise the agent cannot use tokens at all
+{% endif %}
+acl {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+}
+{% if consul_enable_local_script_checks %}
+
+enable_local_script_checks = true
+{% endif %}

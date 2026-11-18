@@ -1,0 +1,87 @@
+---
+# Runs on the first Consul server only: the post's "Bootstrapping ACLs" block.
+- name: Wait for a cluster leader
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8500/v1/status/leader
+    return_content: true
+  register: consul_acl_leader
+  until: consul_acl_leader.json | default('') | length > 0
+  retries: 30
+  delay: 2
+
+- name: Bootstrap the ACL system (once)
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      out=$(/usr/local/bin/consul acl bootstrap -format=json)
+      umask 077
+      printf '%s\n' "$out" > {{ consul_acl_bootstrap_file }}
+    executable: /bin/bash
+    creates: "{{ consul_acl_bootstrap_file }}"
+  no_log: true
+
+- name: Read the bootstrap token
+  ansible.builtin.slurp:
+    src: "{{ consul_acl_bootstrap_file }}"
+  register: consul_acl_bootstrap_raw
+  no_log: true
+
+- name: Create the policy directory
+  ansible.builtin.file:
+    path: "{{ consul_acl_policy_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Write the ACL policy rules
+  ansible.builtin.template:
+    src: "{{ item }}-policy.hcl.j2"
+    dest: "{{ consul_acl_policy_dir }}/{{ item }}-policy.hcl"
+    owner: root
+    group: root
+    mode: "0600"
+  loop:
+    - agent
+    - consul-template
+
+- name: Create policies and tokens
+  environment:
+    CONSUL_HTTP_TOKEN: "{{ (consul_acl_bootstrap_raw.content | b64decode | from_json).SecretID }}"
+  block:
+    - name: Check which policies exist
+      ansible.builtin.command: /usr/local/bin/consul acl policy read -name {{ item }}
+      register: consul_acl_policy_read
+      changed_when: false
+      failed_when: false
+      loop:
+        - agent
+        - consul-template
+
+    - name: Create missing policies
+      ansible.builtin.command: >-
+        /usr/local/bin/consul acl policy create -name {{ item.item }}
+        -rules @{{ consul_acl_policy_dir }}/{{ item.item }}-policy.hcl
+      changed_when: true
+      when: item.rc != 0
+      loop: "{{ consul_acl_policy_read.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Check which tokens exist
+      ansible.builtin.command: /usr/local/bin/consul acl token read -accessor-id {{ item.accessor }}
+      register: consul_acl_token_read
+      changed_when: false
+      failed_when: false
+      no_log: true
+      loop: "{{ _consul_acl_tokens }}"
+
+    - name: Create missing tokens
+      ansible.builtin.command: >-
+        /usr/local/bin/consul acl token create -description "{{ item.item.description }}"
+        -policy-name {{ item.item.policy }}
+        -accessor {{ item.item.accessor }} -secret {{ item.item.secret }}
+      changed_when: true
+      when: item.rc != 0
+      no_log: true
+      loop: "{{ consul_acl_token_read.results }}"

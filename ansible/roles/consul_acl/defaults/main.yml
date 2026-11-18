@@ -1,0 +1,15 @@
+---
+# The bootstrap (management) token SecretID is written here on the first
+# Consul server, readable by root only. Keep it safe, as the post says.
+consul_acl_bootstrap_file: /root/consul-acl-bootstrap.json
+consul_acl_policy_dir: /etc/consul-acl
+consul_acl_servers_group: consul_servers
+
+# Fixed AccessorID/SecretID pairs (UUIDs) so reruns find the tokens they
+# created. Set them in group_vars/all/vault.yml.
+consul_acl_agent_token_accessor: "{{ vault_consul_agent_token_accessor }}"
+consul_acl_agent_token_secret: "{{ vault_consul_agent_token_secret }}"
+consul_acl_template_token_accessor: "{{ vault_consul_template_token_accessor }}"
+consul_acl_template_token_secret: "{{ vault_consul_template_token_secret }}"
+
+consul_acl_data_dir: /var/lib/consul

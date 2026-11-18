@@ -1,0 +1,8 @@
+---
+# LAB/DEMO ONLY. A tiny HTTP server that answers 200 on every path, so the
+# post's health checks (/health, /api/health) pass without a real app.
+# Set demo_backend_enabled: false on hosts that run the real services.
+demo_backend_enabled: true
+demo_backend_ports:
+  - 8080
+  - 3000

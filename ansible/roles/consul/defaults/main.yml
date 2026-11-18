@@ -1,0 +1,20 @@
+---
+consul_version: "2.1.0"
+consul_datacenter: dc1
+consul_data_dir: /var/lib/consul
+consul_config_dir: /etc/consul.d
+consul_log_level: INFO
+
+# true on the Consul servers, false on service nodes and the load balancer
+consul_server: false
+
+# bind_addr is picked with go-sockaddr from this network, as in the post
+consul_bind_network: "10.0.0.0/8"
+
+# Addresses the agents join. Defaults to the hosts in the consul_servers group.
+consul_servers_group: consul_servers
+consul_retry_join: "{{ groups[consul_servers_group] | map('extract', hostvars, 'ansible_host') | list }}"
+consul_bootstrap_expect: "{{ groups[consul_servers_group] | length }}"
+
+# Only needed for script checks (the post's "Script Check" example)
+consul_enable_local_script_checks: false

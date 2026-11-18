@@ -1,0 +1,33 @@
+---
+# Runs on every agent (servers, service nodes, load balancer):
+#   consul acl set-agent-token agent   <agent token>
+#   consul acl set-agent-token default <agent token>
+# With enable_token_persistence the agent keeps them in acl-tokens.json, which
+# is how a rerun knows they are already set.
+- name: Read the persisted agent tokens
+  ansible.builtin.slurp:
+    src: "{{ consul_acl_data_dir }}/acl-tokens.json"
+  register: consul_acl_persisted
+  failed_when: false
+  no_log: true
+
+- name: Read the bootstrap token from the first server
+  ansible.builtin.slurp:
+    src: "{{ consul_acl_bootstrap_file }}"
+  register: consul_acl_bootstrap_raw
+  delegate_to: "{{ groups[consul_acl_servers_group][0] }}"
+  run_once: true
+  no_log: true
+
+- name: Set the agent and default tokens
+  ansible.builtin.command: /usr/local/bin/consul acl set-agent-token {{ item }} {{ consul_acl_agent_token_secret }}
+  environment:
+    CONSUL_HTTP_TOKEN: "{{ (consul_acl_bootstrap_raw.content | b64decode | from_json).SecretID }}"
+  changed_when: true
+  when: >-
+    consul_acl_persisted.content is not defined or
+    ((consul_acl_persisted.content | b64decode | from_json)[item] | default('')) != consul_acl_agent_token_secret
+  no_log: true
+  loop:
+    - agent
+    - default
