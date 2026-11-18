@@ -1,0 +1,19 @@
+---
+_dataplaneapi_url: "http://{{ dataplaneapi_host }}:{{ dataplaneapi_port }}/v3"
+_dataplaneapi_backend_prefix: "consul-backend-{{ dataplaneapi_consul_address }}-{{ dataplaneapi_consul_port }}-"
+_dataplaneapi_consul_wanted:
+  address: "{{ dataplaneapi_consul_address }}"
+  port: "{{ dataplaneapi_consul_port | int }}"
+  enabled: true
+  token: "{{ dataplaneapi_consul_token }}"
+  retry_timeout: "{{ dataplaneapi_consul_retry_timeout | int }}"
+  service_allowlist: "{{ dataplaneapi_consul_services }}"
+  health_check_policy: "{{ dataplaneapi_consul_health_check_policy }}"
+  defaults: consul_services
+  server_slots_base: "{{ dataplaneapi_consul_server_slots_base | int }}"
+  server_slots_growth_type: "{{ dataplaneapi_consul_server_slots_growth_type }}"
+  server_slots_growth_increment: "{{ dataplaneapi_consul_server_slots_growth_increment | int }}"
+_dataplaneapi_consul_existing: >-
+  {{ dataplaneapi_consul_current.json | default([])
+     | selectattr('address', 'equalto', dataplaneapi_consul_address)
+     | selectattr('port', 'equalto', dataplaneapi_consul_port | int) | list }}

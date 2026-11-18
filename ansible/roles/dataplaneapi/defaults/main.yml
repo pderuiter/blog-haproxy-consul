@@ -1,0 +1,38 @@
+---
+dataplaneapi_version: "3.4.7"
+
+# API user. The API listens on localhost only; the role calls it from the
+# load balancer itself. The hash is for dataplaneapi.yaml (mkpasswd -m sha-512),
+# the plain password for the role's own API calls.
+dataplaneapi_user: admin
+dataplaneapi_password: "{{ vault_dataplaneapi_password }}"
+dataplaneapi_password_hash: "{{ vault_dataplaneapi_password_hash }}"
+dataplaneapi_host: 127.0.0.1
+dataplaneapi_port: 5555
+dataplaneapi_config_file: /etc/haproxy/dataplaneapi.yaml
+dataplaneapi_haproxy_config_file: /etc/haproxy/haproxy.cfg
+
+# Consul service discovery (POST /v3/service_discovery/consul). The local
+# Consul agent; backends are named consul-backend-<address>-<port>-<service>.
+dataplaneapi_consul_address: 127.0.0.1
+dataplaneapi_consul_port: 8500
+dataplaneapi_consul_token: "{{ vault_consul_dataplaneapi_token_secret }}"
+dataplaneapi_consul_services:
+  - web
+  - api
+dataplaneapi_consul_health_check_policy: all
+dataplaneapi_consul_retry_timeout: 5
+dataplaneapi_consul_server_slots_base: 10
+dataplaneapi_consul_server_slots_growth_type: linear
+dataplaneapi_consul_server_slots_growth_increment: 10
+
+# Frontend routing: Host header -> Consul service, from a map file. Unknown
+# hosts go to dataplaneapi_default_service. The role writes the map only when
+# it is missing; after that, change routes through the runtime maps API.
+dataplaneapi_hosts_map: /etc/haproxy/maps/hosts.map
+dataplaneapi_default_service: web
+dataplaneapi_routes:
+  - host: www.example.com
+    service: web
+  - host: api.example.com
+    service: api

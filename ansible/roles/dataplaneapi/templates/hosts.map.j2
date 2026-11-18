@@ -1,0 +1,5 @@
+# Host header -> Consul service. Change at runtime through the Data Plane API:
+#   PUT /v3/services/haproxy/runtime/maps/hosts.map/entries/<host>?force_sync=true
+{% for route in dataplaneapi_routes %}
+{{ route.host }} {{ route.service }}
+{% endfor %}

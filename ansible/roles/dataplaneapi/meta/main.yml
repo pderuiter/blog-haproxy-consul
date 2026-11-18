@@ -1,9 +1,9 @@
 ---
 galaxy_info:
-  role_name: consul_template
+  role_name: dataplaneapi
   namespace: pderuiter
   author: Patrick de Ruiter
-  description: consul-template renders haproxy.cfg from the Consul catalog and reloads HAProxy
+  description: HAProxy Data Plane API 3.x with Consul service discovery, as in the post
   license: MIT
   min_ansible_version: "2.15"
   platforms:
@@ -11,7 +11,7 @@ galaxy_info:
       versions:
         - noble
   galaxy_tags:
-    - consul
     - haproxy
+    - consul
 
 dependencies: []

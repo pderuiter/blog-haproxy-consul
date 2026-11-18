@@ -1,0 +1,27 @@
+config_version: 2
+name: {{ inventory_hostname }}
+dataplaneapi:
+  host: {{ dataplaneapi_host }}
+  port: {{ dataplaneapi_port }}
+  advertised:
+    api_address: ""
+    api_port: 0
+  scheme:
+  - http
+  userlist:
+    userlist: controller
+    userlist_file: ""
+  transaction:
+    transaction_dir: /tmp/haproxy
+  user:
+  - name: {{ dataplaneapi_user }}
+    insecure: false
+    password: {{ dataplaneapi_password_hash }}
+haproxy:
+  config_file: {{ dataplaneapi_haproxy_config_file }}
+  haproxy_bin: /usr/sbin/haproxy
+  reload:
+    reload_delay: 5
+    reload_cmd: systemctl reload haproxy
+    restart_cmd: systemctl restart haproxy
+    reload_strategy: custom

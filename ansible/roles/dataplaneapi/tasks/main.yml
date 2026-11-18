@@ -1,0 +1,152 @@
+---
+- name: Install curl, jq and socat for the API and runtime examples
+  ansible.builtin.apt:
+    name:
+      - curl
+      - jq
+      - socat
+    state: present
+
+# The Data Plane API owns haproxy.cfg once it runs (it adds the Consul
+# backends), so the base configuration is written only while the file is
+# still the packaged one. Later frontend changes go through the API.
+- name: Check whether the Data Plane API manages haproxy.cfg
+  ansible.builtin.command: grep -q "Dataplaneapi managed File" {{ dataplaneapi_haproxy_config_file }}
+  register: dataplaneapi_cfg_managed
+  changed_when: false
+  failed_when: dataplaneapi_cfg_managed.rc > 1
+
+- name: Create the map directory
+  ansible.builtin.file:
+    path: "{{ dataplaneapi_hosts_map | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Write the initial host to service map
+  ansible.builtin.template:
+    src: hosts.map.j2
+    dest: "{{ dataplaneapi_hosts_map }}"
+    owner: root
+    group: root
+    mode: "0644"
+    # Only when missing: the runtime maps API (force_sync) owns it afterwards
+    force: false
+  notify: Restart haproxy
+
+- name: Write the base haproxy.cfg
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: "{{ dataplaneapi_haproxy_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: haproxy -c -f %s
+  when: dataplaneapi_cfg_managed.rc != 0
+  notify: Restart haproxy
+
+- name: Check installed Data Plane API version
+  ansible.builtin.command: /usr/local/bin/dataplaneapi --version
+  register: dataplaneapi_installed
+  changed_when: false
+  failed_when: false
+
+- name: Download and install the Data Plane API
+  ansible.builtin.unarchive:
+    src: "https://github.com/haproxytech/dataplaneapi/releases/download/v{{ dataplaneapi_version }}/dataplaneapi_{{ dataplaneapi_version }}_linux_x86_64.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    include:
+      - dataplaneapi
+    owner: root
+    group: root
+    mode: "0755"
+  when: dataplaneapi_installed.stdout is not search('v' ~ (dataplaneapi_version | regex_escape) ~ ' ')
+  notify: Restart dataplaneapi
+
+- name: Write the Data Plane API configuration
+  ansible.builtin.template:
+    src: dataplaneapi.yaml.j2
+    dest: "{{ dataplaneapi_config_file }}"
+    # root and 0600: the API rewrites this file like this on every start
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart dataplaneapi
+
+- name: Install the Data Plane API systemd unit
+  ansible.builtin.template:
+    src: dataplaneapi.service.j2
+    dest: /etc/systemd/system/dataplaneapi.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart dataplaneapi
+
+- name: Enable and start HAProxy
+  ansible.builtin.systemd_service:
+    name: haproxy
+    enabled: true
+    state: started
+
+- name: Enable and start the Data Plane API
+  ansible.builtin.systemd_service:
+    name: dataplaneapi
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending restarts before calling the API
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the Data Plane API
+  ansible.builtin.uri:
+    url: "{{ _dataplaneapi_url }}/info"
+    url_username: "{{ dataplaneapi_user }}"
+    url_password: "{{ dataplaneapi_password }}"
+    force_basic_auth: true
+  register: dataplaneapi_info
+  until: dataplaneapi_info.status == 200
+  retries: 15
+  delay: 2
+  no_log: true
+
+- name: Read the Consul service discovery configuration
+  ansible.builtin.uri:
+    url: "{{ _dataplaneapi_url }}/service_discovery/consul"
+    url_username: "{{ dataplaneapi_user }}"
+    url_password: "{{ dataplaneapi_password }}"
+    force_basic_auth: true
+  register: dataplaneapi_consul_current
+  no_log: true
+
+- name: Register Consul with the Data Plane API
+  ansible.builtin.uri:
+    url: "{{ _dataplaneapi_url }}/service_discovery/consul"
+    method: POST
+    body_format: json
+    body: "{{ _dataplaneapi_consul_wanted }}"
+    url_username: "{{ dataplaneapi_user }}"
+    url_password: "{{ dataplaneapi_password }}"
+    force_basic_auth: true
+    status_code: 201
+  when: _dataplaneapi_consul_existing | length == 0
+  changed_when: true
+  no_log: true
+
+- name: Update the Consul service discovery configuration
+  ansible.builtin.uri:
+    url: "{{ _dataplaneapi_url }}/service_discovery/consul/{{ _dataplaneapi_consul_existing[0].id }}"
+    method: PUT
+    body_format: json
+    body: "{{ _dataplaneapi_consul_wanted | combine({'id': _dataplaneapi_consul_existing[0].id}) }}"
+    url_username: "{{ dataplaneapi_user }}"
+    url_password: "{{ dataplaneapi_password }}"
+    force_basic_auth: true
+  when:
+    - _dataplaneapi_consul_existing | length > 0
+    - (_dataplaneapi_consul_existing[0] | dict2items | selectattr('key', 'in', _dataplaneapi_consul_wanted.keys()) | items2dict) != _dataplaneapi_consul_wanted
+  changed_when: true
+  no_log: true

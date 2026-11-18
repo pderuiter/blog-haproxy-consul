@@ -1,6 +1,6 @@
 ---
 consul_version: "2.1.0"
-consul_template_version: "0.43.1"
+dataplaneapi_version: "3.4.7"
 consul_datacenter: dc1
 
 # The agents bind to their address in this network (go-sockaddr, as in the post)

@@ -1,0 +1,44 @@
+# Base configuration, written once by Ansible. The Data Plane API adds the
+# consul-backend-* backends and owns this file from then on.
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+
+# Settings for the backends the Data Plane API creates from Consul
+defaults consul_services
+    mode http
+    log global
+    option httplog
+    option dontlognull
+    option forwardfor
+    balance roundrobin
+    timeout connect 5s
+    timeout client 50s
+    timeout server 50s
+
+defaults
+    mode http
+    log global
+    option httplog
+    option dontlognull
+    timeout connect 5s
+    timeout client 50s
+    timeout server 50s
+
+frontend stats
+    bind *:8404
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+    http-request use-service prometheus-exporter if { path /metrics }
+
+frontend http_front
+    bind *:80
+    # Host header -> Consul service name (hosts.map), then its generated backend
+    http-request set-var(txn.service) req.hdr(host),field(1,:),lower,map({{ dataplaneapi_hosts_map }},{{ dataplaneapi_default_service }})
+    use_backend {{ _dataplaneapi_backend_prefix }}%[var(txn.service)]

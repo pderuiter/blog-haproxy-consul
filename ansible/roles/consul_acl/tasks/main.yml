@@ -43,7 +43,7 @@
     mode: "0600"
   loop:
     - agent
-    - consul-template
+    - dataplaneapi
 
 - name: Create policies and tokens
   environment:
@@ -56,7 +56,7 @@
       failed_when: false
       loop:
         - agent
-        - consul-template
+        - dataplaneapi
 
     - name: Create missing policies
       ansible.builtin.command: >-

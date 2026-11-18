@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+[Unit]
+Description=HAProxy Data Plane API
+After=network.target haproxy.service consul.service
+Requires=haproxy.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/dataplaneapi -f {{ dataplaneapi_config_file }}
+Restart=on-failure
+RestartSec=5
+# Runs as root: it rewrites {{ dataplaneapi_haproxy_config_file }} and reloads HAProxy.
+
+[Install]
+WantedBy=multi-user.target

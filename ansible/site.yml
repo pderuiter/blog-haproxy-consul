@@ -3,7 +3,7 @@
 #
 #   consul_servers        3 Consul servers (raft quorum, ACLs, UI)
 #   consul_service_nodes  Consul client agent + the web and api service definitions
-#   haproxy_lb            Consul client agent + HAProxy + consul-template
+#   haproxy_lb            Consul client agent + HAProxy + Data Plane API (Consul service discovery)
 
 - name: Consul servers
   hosts: consul_servers
@@ -44,4 +44,4 @@
   gather_facts: false
   roles:
     - role: haproxy_install
-    - role: consul_template
+    - role: dataplaneapi
